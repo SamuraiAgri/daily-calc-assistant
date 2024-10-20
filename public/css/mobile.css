@@ -1,0 +1,80 @@
+/* ヘッダーを固定表示 */
+header {
+    position: fixed;
+    top: 0;
+    right: 0;
+    background-color: rgba(96, 133, 138, 0.8);
+    z-index: 10000;  /* 他の要素よりも前面に表示 */
+    padding: 10px 20px;
+    width: 100%;
+}
+
+body {
+    padding-top: 60px; /* 固定したヘッダー分の余白を上に追加 */
+}
+
+/* ハンバーガーメニューのスタイル調整 */
+.hamburger-menu {
+    display: inline-block;
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    cursor: pointer;
+    z-index: 1000;
+}
+
+.hamburger-icon {
+    display: block;
+    width: 30px;
+    height: 4px;
+    background-color: #fff;
+    margin: 5px 0;
+}
+
+/* モバイルナビゲーション */
+.mobile-nav {
+    background-color: rgba(96, 133, 138, 0.6);  /* 60%不透明な白 */
+    z-index: 999;
+    padding: 20px;
+    display: none; /* 初期は非表示 */
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+}
+
+.mobile-nav ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    display: flex; /* 横並びにする */
+    flex-wrap: wrap; /* 折り返しを許可する */
+}
+
+.mobile-nav ul li {
+    padding: 15px;
+    text-align: center;
+    width: auto;
+}
+
+.mobile-nav ul li a {
+    text-decoration: none;
+    color: #fff;
+    font-size: 1.2em;
+    font-family: 'Arial', sans-serif;
+    display: inline-block;
+    text-align: center;
+}
+
+.mobile-nav ul li a:hover {
+    color: #ff1f63;
+}
+
+/* メニューを開いた際に全画面に表示 */
+.mobile-nav.open {
+    display: flex; /* メニューを表示する */
+}
+
+.hero {
+    padding: 0px;
+}

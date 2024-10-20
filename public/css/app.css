@@ -1,0 +1,319 @@
+/* 背景色の設定 */
+body {
+    background-color: #60858a;
+    font-family: 'Arial', sans-serif;
+}
+
+/* ヘッダーのスタイル調整 */
+header {
+    padding: 20px;
+    text-align: center;
+}
+
+header h1 {
+    font-size: 2.5em;
+    color: #fff;
+    font-family: 'Sans-serif', Arial;
+}
+
+nav ul {
+    display: flex;
+    justify-content: center;
+    padding: 0;
+    list-style-type: none;
+}
+
+nav ul li {
+    margin: 0 15px;
+}
+
+nav ul li a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 1.2em;
+}
+
+/* ヒーローセクション */
+.hero {
+    color: #fff;
+    padding: 100px 20px;
+    text-align: center;
+}
+
+.hero h1 {
+    font-size: 3em;
+}
+
+.hero p {
+    font-size: 1.5em;
+    margin-bottom: 20px;
+}
+
+.cta-button {
+    background-color: #FF4081;
+    color: #fff;
+    padding: 15px 30px;
+    text-decoration: none;
+    font-size: 1.2em;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.cta-button:hover {
+    background-color: #ff1f63;
+}
+
+/* 機能紹介セクション */
+.features {
+    padding: 50px 20px;
+    text-align: center;
+}
+
+.features h2 {
+    font-size: 2.5em;
+    margin-bottom: 30px;
+}
+
+.feature-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+}
+
+.feature-item {
+    width: 30%;
+    background-color: rgba(96, 133, 138, 0.6);  /* 60%不透明な白 */
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 10px;
+    text-align: center;
+    text-decoration: none;
+}
+
+/* ホバー時のスタイル */
+.feature-item:hover {
+    transform: translateY(-5px);
+}
+
+/* ヘッダースタイル */
+.feature-item h3 {
+    color: #fff;
+    margin-bottom: 10px;
+}
+
+/* 説明文スタイル */
+.feature-item p {
+    font-size: 1.2em;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.feature-item a {
+    color: #FF4081;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+/* 共通フォームスタイル */
+form {
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+label {
+    display: block;
+    font-size: 1.2em;
+    margin-bottom: 8px;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"],
+select {
+    width: 95%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1.1em;
+}
+
+input[type="radio"] {
+    margin-right: 5px;
+}
+
+button[type="submit"] {
+    background-color: #FF4081;
+    color: #fff;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 5px;
+    font-size: 1.2em;
+    cursor: pointer;
+    width: 100%;
+}
+
+button[type="submit"]:hover {
+    background-color: #ff1f63;
+}
+
+/* ヘッダースタイル */
+h1 {
+    font-size: 2.8em;
+    color: #fff; /* 白色に変更 */
+    text-align: center;
+    margin-bottom: 20px;
+    font-family: 'Arial', sans-serif;
+    font-weight: bold;
+}
+
+h2 {
+    font-size: 2.2em;
+    color: #fff; /* 白色に変更 */
+    text-align: center;
+    margin-bottom: 15px;
+    font-family: 'Arial', sans-serif;
+    font-weight: bold;
+}
+
+/* フッターを中央寄せに調整 */
+footer {
+    text-align: center;
+    color: #fff;
+    position: relative;
+    bottom: 0;
+    width: 100%;
+}
+/* pタグのデザイン調整 */
+p {
+    color: #fff;  /* 白色に変更 */
+    font-size: 1.2em;
+    margin-bottom: 20px;
+    line-height: 1.5;
+    text-align: center; /* テキストを中央寄せ */
+}
+
+
+/* レスポンシブ対応 */
+@media screen and (max-width: 768px) {
+    form {
+        padding: 15px;
+    }
+
+    button[type="submit"] {
+        font-size: 1.1em;
+    }
+}
+
+/* 結果表示ページ用の共通スタイル */
+.result-section {
+    background-color: #fff;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    max-width: 600px;
+    margin: 30px auto;
+    text-align: center;
+}
+
+.result-section h1 {
+    font-size: 2.2em;
+    color: #46656b;
+    margin-bottom: 20px;
+}
+
+.result-section h2 {
+    font-size: 2.2em;
+    color: #46656b;
+    margin-bottom: 20px;
+}
+
+.result-section p {
+    font-size: 1.2em;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+.result-section .cta-button {
+    background-color: #FF4081;
+    color: #fff;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 5px;
+    font-size: 1.2em;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.3s ease;
+}
+
+.result-section .cta-button:hover {
+    background-color: #ff1f63;
+}
+
+/* liタグのリストアイコンを非表示にする */
+ul {
+    list-style-type: none;
+    padding-left: 0;  /* インデントもリセット */
+}
+
+li {
+    margin-bottom: 10px;  /* リスト項目に余白を追加 */
+}
+/* パーティクルがページ全体で表示されるように設定 */
+#particles-js {
+    position: fixed;       /* スクロールしても固定 */
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: -1;           /* 背景として扱う */
+    pointer-events: none;  /* パーティクルがクリックをブロックしないように */
+}
+
+/* bodyの高さを設定して、ページ全体に適用 */
+html, body {
+    height: 100%;
+    overflow-x: hidden; /* 横スクロールを防止 */
+}
+
+/* ヘッダーのスタイル（前面に表示される） */
+header {
+    position: relative;
+    z-index: 1;
+    color: white;
+    padding: 20px;
+    text-align: center;
+}
+
+header nav ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+header nav ul li {
+    display: inline;
+    margin-right: 15px;
+}
+
+header nav ul li a {
+    color: white;
+    text-decoration: none;
+}
+
+main {
+    position: relative;
+    z-index: 1;
+    padding: 20px;
+}
+
+footer {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 20px;
+    color: white;
+}
