@@ -180,14 +180,6 @@ h2 {
     font-weight: bold;
 }
 
-/* フッターを中央寄せに調整 */
-footer {
-    text-align: center;
-    color: #fff;
-    position: relative;
-    bottom: 0;
-    width: 100%;
-}
 /* pタグのデザイン調整 */
 p {
     color: #fff;  /* 白色に変更 */
@@ -276,8 +268,9 @@ li {
 
 /* bodyの高さを設定して、ページ全体に適用 */
 html, body {
-    height: 100%;
-    overflow-x: hidden; /* 横スクロールを防止 */
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
 }
 
 /* ヘッダーのスタイル（前面に表示される） */

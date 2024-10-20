@@ -82,3 +82,7 @@ body {
 .feature-item {
     background-color: rgba(211, 211, 211, 0.3);
 }
+
+footer {
+    padding: 0px;
+}
