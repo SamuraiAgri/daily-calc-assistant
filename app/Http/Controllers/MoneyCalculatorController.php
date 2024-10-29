@@ -16,10 +16,17 @@ class MoneyCalculatorController extends Controller
     // 毎月払いローン計算
     public function calculateLoan(Request $request)
     {
-        $principal = $request->input('principal');  // 借入金額
-        $rate = $request->input('rate');            // 年利率
-        $years = $request->input('years');          // 返済期間（年）
-        $method = $request->input('method');        // 返済方法（元利均等、元金均等）
+        // バリデーションルールを定義
+        $validatedData = $request->validate([
+            'principal' => 'required|numeric|min:1',  // 借入金額が1万円以上
+            'rate' => 'required|numeric|min:0|max:100',  // 年利率が0%以上100%以下
+            'years' => 'required|integer|min:1',  // 返済期間が1年以上
+        ]);
+
+        $principal = $validatedData['principal'];
+        $rate = $validatedData['rate'];
+        $years = $validatedData['years'];
+        $method = $request->input('method'); // 返済方法
 
         // 月利率
         $monthlyRate = $rate / 12 / 100;
@@ -57,13 +64,16 @@ class MoneyCalculatorController extends Controller
                 'monthlyPayment' => $monthlyPayment,
                 'principalPayment' => $principalPayment,
                 'interestPayment' => $interestPayment,
-                'remainingPrincipal' => $remainingPrincipal,
+                'remainingPrincipal' => $remainingPrincipal
             ];
         }
 
-        return view('moneycalculators.loan_result', compact('schedule', 'totalPayment', 'totalInterest', 'method'), ['agent' => new Agent()]);
+        return view('moneycalculators.loan_result', [
+            'totalPayment' => $totalPayment,
+            'totalInterest' => $totalInterest,
+            'schedule' => $schedule
+        ]);
     }
-
     // ボーナス併用ローン計算
     public function calculateLoanWithBonus(Request $request)
     {
