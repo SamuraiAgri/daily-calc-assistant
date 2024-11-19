@@ -12,6 +12,15 @@
     @endif
     <!-- particles.jsのCDNを読み込み -->
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-DEL37BWCPP"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-DEL37BWCPP');
+    </script>
 </head>
 <body>
     <!-- パーティクルアニメーション用の要素 -->
