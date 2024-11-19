@@ -21,6 +21,8 @@
 
         gtag('config', 'G-DEL37BWCPP');
     </script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8001546494492220"
+    crossorigin="anonymous"></script>
 </head>
 <body>
     <!-- パーティクルアニメーション用の要素 -->
