@@ -1,2 +1,22 @@
+# Daily Calc Assistant - robots.txt
+# https://daily-calc-assistant.com
+
 User-agent: *
-Disallow:
+Allow: /
+
+# サイトマップ
+Sitemap: https://daily-calc-assistant.com/sitemap.xml
+
+# クローラー制限
+Disallow: /storage/
+Disallow: /vendor/
+Disallow: /.env
+Disallow: /config/
+
+# キャッシュディレクトリ
+Disallow: /bootstrap/cache/
+Disallow: /storage/framework/
+
+# Googlebot用設定
+User-agent: Googlebot
+Allow: /

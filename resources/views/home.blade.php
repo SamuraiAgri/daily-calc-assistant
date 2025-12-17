@@ -4,8 +4,12 @@
     <!-- ヒーローセクション -->
     <section class="hero">
         <div class="hero-content">
+            <h1 style="font-size: 2.5em; margin-bottom: 20px;">Daily Calc Assistant</h1>
             <p>シンプルで使いやすい計算ツールで、日々の生活をもっと便利に。</p>
-            <a href="#features" class="cta-button">計算を始める</a>
+            <div class="hero-buttons">
+                <a href="#features" class="cta-button">計算を始める</a>
+                <a href="{{ route('blog.index') }}" class="cta-button-secondary">ブログを読む</a>
+            </div>
         </div>
     </section>
 

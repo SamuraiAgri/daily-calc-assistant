@@ -4,9 +4,29 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MoneyCalculatorController;
 use App\Http\Controllers\DateCalculatorController;
+use App\Http\Controllers\ContactController;
+use App\Http\Controllers\BlogController;
+use App\Http\Controllers\SitemapController;
 
 // ホームページ
 Route::get('/', [HomeController::class, 'index'])->name('home');
+
+// サイトマップ
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+
+// 静的ページ
+Route::view('/privacy', 'privacy')->name('privacy');
+Route::view('/about', 'about')->name('about');
+Route::view('/faq', 'faq')->name('faq');
+
+// お問い合わせ
+Route::get('/contact', [ContactController::class, 'index'])->name('contact');
+Route::post('/contact', [ContactController::class, 'submit'])->name('contact.submit');
+
+// ブログ
+Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
+Route::get('/blog/category/{category}', [BlogController::class, 'category'])->name('blog.category');
+Route::get('/blog/{slug}', [BlogController::class, 'show'])->name('blog.show');
 
 // Money関連の計算
 Route::get('/loan', [MoneyCalculatorController::class, 'loan'])->name('calculator.loan');

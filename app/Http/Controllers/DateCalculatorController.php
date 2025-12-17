@@ -4,78 +4,140 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Carbon\Carbon;
-use Jenssegers\Agent\Agent;
+use Illuminate\Validation\ValidationException;
 
 class DateCalculatorController extends Controller
 {
-    // 年齢計算ページの表示
+    /**
+     * 共通の日付バリデーションルール
+     */
+    private const DATE_RULES = [
+        'birthdate' => 'required|date|before_or_equal:today|after:1900-01-01',
+    ];
+
+    /**
+     * 年齢計算ページ表示
+     */
     public function age()
     {
-        return view('datecalculators.age', ['agent' => new Agent()]);
+        return view('datecalculators.age');
     }
 
-    // 年齢計算ロジック
+    /**
+     * 年齢計算ロジック
+     */
     public function calculateAge(Request $request)
     {
-        $birthdate = $request->input('birthdate'); // 誕生日の入力
-        $birthDate = Carbon::parse($birthdate);    // Carbonを使用して日付解析
-        $currentDate = Carbon::now();
+        $validated = $request->validate(self::DATE_RULES, [
+            'birthdate.required' => '生年月日を入力してください',
+            'birthdate.date' => '有効な日付を入力してください',
+            'birthdate.before_or_equal' => '生年月日は今日以前の日付を入力してください',
+            'birthdate.after' => '1900年1月1日以降の日付を入力してください',
+        ]);
 
-        // 年齢の計算
-        $age = $birthDate->age;
+        try {
+            $birthDate = Carbon::parse($validated['birthdate']);
+            $currentDate = Carbon::now();
 
-        // 次の誕生日を計算
-        $nextBirthday = $birthDate->copy()->year($currentDate->year);
-        if ($nextBirthday->isPast()) {
-            $nextBirthday->addYear();
+            $age = $birthDate->age;
+
+            // 次の誕生日を計算
+            $nextBirthday = $birthDate->copy()->year($currentDate->year);
+            if ($nextBirthday->isPast()) {
+                $nextBirthday->addYear();
+            }
+            $daysUntilNextBirthday = $currentDate->diffInDays($nextBirthday);
+
+            return view('datecalculators.age_result', compact('birthDate', 'age', 'daysUntilNextBirthday'));
+        } catch (\Exception $e) {
+            return back()->withErrors(['birthdate' => '日付の解析に失敗しました。正しい日付を入力してください。']);
         }
-        $daysUntilNextBirthday = $currentDate->diffInDays($nextBirthday);
-
-        return view('datecalculators.age_result', compact('birthDate', 'age', 'daysUntilNextBirthday'), ['agent' => new Agent()]);
     }
-    // 入学卒業年計算ページの表示
+
+    /**
+     * 入学卒業年計算ページ表示
+     */
     public function schoolYears()
     {
-        return view('datecalculators.school_years', ['agent' => new Agent()]);
+        return view('datecalculators.school_years');
     }
 
-    // 入学卒業年計算ロジック
+    /**
+     * 入学卒業年計算ロジック
+     */
     public function calculateSchoolYears(Request $request)
     {
-        $birthdate = $request->input('birthdate');
-        $birthDate = Carbon::parse($birthdate);
+        $validated = $request->validate(self::DATE_RULES, [
+            'birthdate.required' => '生年月日を入力してください',
+            'birthdate.date' => '有効な日付を入力してください',
+        ]);
 
-        // 学校制度に基づく入学年と卒業年（入学は4月、卒業は3月）
-        $juniorHighSchoolStart = $birthDate->copy()->addYears(13)->year . '年4月';
-        $juniorHighSchoolEnd = $birthDate->copy()->addYears(16)->year . '年3月';
+        try {
+            $birthDate = Carbon::parse($validated['birthdate']);
 
-        $highSchoolStart = $birthDate->copy()->addYears(16)->year . '年4月';
-        $highSchoolEnd = $birthDate->copy()->addYears(19)->year . '年3月';
+            // 早生まれ（1月2日～4月1日生まれ）かどうかを判定
+            $isEarlyBorn = $birthDate->month >= 1 && $birthDate->month <= 3 ||
+                           ($birthDate->month === 4 && $birthDate->day === 1);
 
-        $universityStart = $birthDate->copy()->addYears(19)->year . '年4月';
-        $universityEnd = $birthDate->copy()->addYears(23)->year . '年3月';
+            // 学年開始年を計算（早生まれは1年前の学年）
+            $schoolStartYear = $isEarlyBorn
+                ? $birthDate->year + 5
+                : $birthDate->year + 6;
 
-        return view('datecalculators.school_years_result', compact(
-            'birthDate',
-            'juniorHighSchoolStart', 'juniorHighSchoolEnd',
-            'highSchoolStart', 'highSchoolEnd',
-            'universityStart', 'universityEnd'
-        ), ['agent' => new Agent()]);
+            // 各学校の入学・卒業年を計算
+            $elementarySchoolStart = $schoolStartYear . '年4月';
+            $elementarySchoolEnd = ($schoolStartYear + 6) . '年3月';
+
+            $juniorHighSchoolStart = ($schoolStartYear + 6) . '年4月';
+            $juniorHighSchoolEnd = ($schoolStartYear + 9) . '年3月';
+
+            $highSchoolStart = ($schoolStartYear + 9) . '年4月';
+            $highSchoolEnd = ($schoolStartYear + 12) . '年3月';
+
+            $universityStart = ($schoolStartYear + 12) . '年4月';
+            $universityEnd = ($schoolStartYear + 16) . '年3月';
+
+            return view('datecalculators.school_years_result', compact(
+                'birthDate',
+                'elementarySchoolStart', 'elementarySchoolEnd',
+                'juniorHighSchoolStart', 'juniorHighSchoolEnd',
+                'highSchoolStart', 'highSchoolEnd',
+                'universityStart', 'universityEnd'
+            ));
+        } catch (\Exception $e) {
+            return back()->withErrors(['birthdate' => '日付の解析に失敗しました。']);
+        }
     }
-    // 日数計算ページの表示
-    public function daysSince() {
-        return view('datecalculators.days_since', ['agent' => new Agent()]);
+
+    /**
+     * 日数計算ページ表示
+     */
+    public function daysSince()
+    {
+        return view('datecalculators.days_since');
     }
 
-    // 日数計算ロジック（指定日からの経過日数）
-    public function calculateDaysSince(Request $request) {
-        $startDate = Carbon::parse($request->input('start_date'));  // 開始日
-        $currentDate = Carbon::now();  // 現在の日付
+    /**
+     * 日数計算ロジック
+     */
+    public function calculateDaysSince(Request $request)
+    {
+        $validated = $request->validate([
+            'start_date' => 'required|date|after:1900-01-01',
+        ], [
+            'start_date.required' => '開始日を入力してください',
+            'start_date.date' => '有効な日付を入力してください',
+        ]);
 
-        // 開始日からの経過日数を計算
-        $daysPassed = $currentDate->diffInDays($startDate);
+        try {
+            $startDate = Carbon::parse($validated['start_date']);
+            $currentDate = Carbon::now();
 
-        // 結果をビューに返す
-        return view('datecalculators.days_since_result', compact('daysPassed'), ['agent' => new Agent()]);
+            $daysPassed = $currentDate->diffInDays($startDate);
+
+            return view('datecalculators.days_since_result', compact('daysPassed', 'startDate'));
+        } catch (\Exception $e) {
+            return back()->withErrors(['start_date' => '日付の解析に失敗しました。']);
+        }
     }
 }

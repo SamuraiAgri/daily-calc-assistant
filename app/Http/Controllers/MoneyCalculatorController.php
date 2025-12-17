@@ -3,45 +3,114 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Jenssegers\Agent\Agent;
+use Illuminate\Validation\ValidationException;
 
 class MoneyCalculatorController extends Controller
 {
-    // ローン計算ページ（毎月払いとボーナス併用払いを選択可能に）
+    /**
+     * 共通バリデーションルール
+     */
+    private const LOAN_RULES = [
+        'principal' => 'required|numeric|min:1|max:100000000',
+        'rate' => 'required|numeric|min:0|max:100',
+        'years' => 'required|integer|min:1|max:50',
+        'method' => 'required|in:fixed,principal',
+    ];
+
+    private const SAVINGS_RULES = [
+        'monthly_amount' => 'required|numeric|min:1|max:100000000',
+        'rate' => 'required|numeric|min:0|max:100',
+        'years' => 'required|integer|min:1|max:50',
+    ];
+
+    /**
+     * 税率定数
+     */
+    private const TAX_RATE = 0.2; // 20%
+
+    /**
+     * ローン計算ページ表示
+     * Note: $agent はViewServiceProviderで共有済み
+     */
     public function loan()
     {
-        return view('moneycalculators.loan', ['agent' => new Agent()]);
+        return view('moneycalculators.loan');
     }
 
-    // 毎月払いローン計算
+    /**
+     * 毎月払いローン計算
+     */
     public function calculateLoan(Request $request)
     {
-        // バリデーションルールを定義
-        $validatedData = $request->validate([
-            'principal' => 'required|numeric|min:1',  // 借入金額が1万円以上
-            'rate' => 'required|numeric|min:0|max:100',  // 年利率が0%以上100%以下
-            'years' => 'required|integer|min:1',  // 返済期間が1年以上
+        $validated = $request->validate(self::LOAN_RULES, [
+            'principal.required' => '借入金額を入力してください',
+            'principal.min' => '借入金額は1万円以上を入力してください',
+            'rate.required' => '年利率を入力してください',
+            'rate.min' => '年利率は0%以上を入力してください',
+            'rate.max' => '年利率は100%以下を入力してください',
+            'years.required' => '返済期間を入力してください',
+            'years.min' => '返済期間は1年以上を入力してください',
         ]);
 
-        $principal = $validatedData['principal'];
-        $rate = $validatedData['rate'];
-        $years = $validatedData['years'];
-        $method = $request->input('method'); // 返済方法
+        $schedule = $this->calculateLoanSchedule(
+            $validated['principal'],
+            $validated['rate'],
+            $validated['years'],
+            $validated['method']
+        );
 
-        // 月利率
+        return view('moneycalculators.loan_result', $schedule);
+    }
+
+    /**
+     * ボーナス併用ローン計算
+     */
+    public function calculateLoanWithBonus(Request $request)
+    {
+        $rules = array_merge(self::LOAN_RULES, [
+            'bonus' => 'required|numeric|min:0|max:100000000',
+        ]);
+
+        $validated = $request->validate($rules, [
+            'bonus.required' => 'ボーナス返済額を入力してください',
+        ]);
+
+        $schedule = $this->calculateLoanSchedule(
+            $validated['principal'],
+            $validated['rate'],
+            $validated['years'],
+            $validated['method'],
+            $validated['bonus']
+        );
+
+        return view('moneycalculators.loan_with_bonus_result', $schedule);
+    }
+
+    /**
+     * ローン返済スケジュール計算（共通ロジック）
+     */
+    private function calculateLoanSchedule(
+        float $principal,
+        float $rate,
+        int $years,
+        string $method,
+        float $bonusPayment = 0
+    ): array {
         $monthlyRate = $rate / 12 / 100;
         $months = $years * 12;
+        $bonusTimesPerYear = 2;
 
-        // 各月の返済額を計算
         $schedule = [];
         $remainingPrincipal = $principal;
         $totalPayment = 0;
         $totalInterest = 0;
 
         for ($i = 1; $i <= $months; $i++) {
-            if ($method == 'fixed') {
+            if ($method === 'fixed') {
                 // 元利均等返済
-                $monthlyPayment = $principal * $monthlyRate / (1 - pow(1 + $monthlyRate, -$months));
+                $monthlyPayment = $monthlyRate > 0
+                    ? $principal * $monthlyRate / (1 - pow(1 + $monthlyRate, -$months))
+                    : $principal / $months;
                 $interestPayment = $remainingPrincipal * $monthlyRate;
                 $principalPayment = $monthlyPayment - $interestPayment;
             } else {
@@ -51,66 +120,16 @@ class MoneyCalculatorController extends Controller
                 $monthlyPayment = $principalPayment + $interestPayment;
             }
 
-            // 総支払額と総利息を加算
-            $totalPayment += $monthlyPayment;
-            $totalInterest += $interestPayment;
-
-            // 残りの元本を計算
-            $remainingPrincipal -= $principalPayment;
-
-            // 各月の支払情報を保存
-            $schedule[] = [
-                'month' => $i,
-                'monthlyPayment' => $monthlyPayment,
-                'principalPayment' => $principalPayment,
-                'interestPayment' => $interestPayment,
-                'remainingPrincipal' => $remainingPrincipal
-            ];
-        }
-
-        return view('moneycalculators.loan_result', [
-            'totalPayment' => $totalPayment,
-            'totalInterest' => $totalInterest,
-            'schedule' => $schedule
-        ]);
-    }
-    // ボーナス併用ローン計算
-    public function calculateLoanWithBonus(Request $request)
-    {
-        $principal = $request->input('principal');   // 借入金額
-        $rate = $request->input('rate');             // 年利率
-        $years = $request->input('years');           // 返済期間（年）
-        $bonusPayment = $request->input('bonus');    // ボーナス返済額
-        $bonusTimesPerYear = 2;                      // ボーナス返済の回数（年2回）
-        $method = $request->input('method');         // 返済方法（元利均等、元金均等）
-
-        $monthlyRate = $rate / 12 / 100;
-        $months = $years * 12;
-        $schedule = [];
-        $remainingPrincipal = $principal;
-        $totalPayment = 0;
-        $totalInterest = 0;
-
-        for ($i = 1; $i <= $months; $i++) {
-            if ($method == 'fixed') {
-                $monthlyPayment = $principal * $monthlyRate / (1 - pow(1 + $monthlyRate, -$months));
-                $interestPayment = $remainingPrincipal * $monthlyRate;
-                $principalPayment = $monthlyPayment - $interestPayment;
-            } else {
-                $principalPayment = $principal / $months;
-                $interestPayment = $remainingPrincipal * $monthlyRate;
-                $monthlyPayment = $principalPayment + $interestPayment;
-            }
-
-            if ($i % (12 / $bonusTimesPerYear) == 0) {
+            // ボーナス月の追加返済
+            $bonusThisMonth = 0;
+            if ($bonusPayment > 0 && $i % (12 / $bonusTimesPerYear) === 0) {
+                $bonusThisMonth = $bonusPayment;
                 $monthlyPayment += $bonusPayment;
-                $totalPayment += $bonusPayment;
             }
 
             $totalPayment += $monthlyPayment;
             $totalInterest += $interestPayment;
-
-            $remainingPrincipal -= $principalPayment;
+            $remainingPrincipal = max(0, $remainingPrincipal - $principalPayment);
 
             $schedule[] = [
                 'month' => $i,
@@ -118,52 +137,66 @@ class MoneyCalculatorController extends Controller
                 'principalPayment' => $principalPayment,
                 'interestPayment' => $interestPayment,
                 'remainingPrincipal' => $remainingPrincipal,
+                'bonusPayment' => $bonusThisMonth,
             ];
         }
 
-        return view('moneycalculators.loan_with_bonus_result', compact('schedule', 'totalPayment', 'totalInterest', 'method'), ['agent' => new Agent()]);
+        return [
+            'schedule' => $schedule,
+            'totalPayment' => $totalPayment,
+            'totalInterest' => $totalInterest,
+            'method' => $method,
+        ];
     }
 
-    // 積立計算ページの表示
+    /**
+     * 積立計算ページ表示
+     */
     public function savings()
     {
-        return view('moneycalculators.savings', ['agent' => new Agent()]);
+        return view('moneycalculators.savings');
     }
 
-    // 積立計算（満期一括課税）
+    /**
+     * 積立計算（満期一括課税）
+     */
     public function calculateLumpSum(Request $request)
     {
-        $monthlyAmount = $request->input('monthly_amount');  // 毎月積立額
-        $rate = $request->input('rate');                     // 年利率
-        $years = $request->input('years');                   // 積立期間（年）
-        $totalAmount = $monthlyAmount * 12 * $years;         // 元本合計
+        $validated = $request->validate(self::SAVINGS_RULES);
 
-        // 利率を月ベースに変換
+        $monthlyAmount = $validated['monthly_amount'];
+        $rate = $validated['rate'];
+        $years = $validated['years'];
+        $totalAmount = $monthlyAmount * 12 * $years;
+
         $monthlyRate = $rate / 12 / 100;
         $months = $years * 12;
 
-        // 複利での積立総額を計算
-        $futureValue = $monthlyAmount * ((pow(1 + $monthlyRate, $months) - 1) / $monthlyRate);
+        // 複利での積立総額を計算（0除算対策）
+        $futureValue = $monthlyRate > 0
+            ? $monthlyAmount * ((pow(1 + $monthlyRate, $months) - 1) / $monthlyRate)
+            : $monthlyAmount * $months;
 
-        // 利息に対する課税額（満期一括）
-        $taxRate = 0.2;  // 20% の税率
         $interest = $futureValue - $totalAmount;
-        $taxAmount = $interest * $taxRate;
+        $taxAmount = $interest * self::TAX_RATE;
         $futureValueAfterTax = $futureValue - $taxAmount;
 
-        return view('moneycalculators.savings_result', compact('futureValueAfterTax', 'interest', 'taxAmount'), ['agent' => new Agent()]);
+        return view('moneycalculators.savings_result', compact('futureValueAfterTax', 'interest', 'taxAmount'));
     }
 
-    // 積立計算（複利毎課税）
+    /**
+     * 積立計算（複利毎課税）
+     */
     public function calculateCompoundTax(Request $request)
     {
-        $monthlyAmount = $request->input('monthly_amount');  // 毎月積立額
-        $rate = $request->input('rate');                     // 年利率
-        $years = $request->input('years');                   // 積立期間（年）
+        $validated = $request->validate(self::SAVINGS_RULES);
+
+        $monthlyAmount = $validated['monthly_amount'];
+        $rate = $validated['rate'];
+        $years = $validated['years'];
 
         $monthlyRate = $rate / 12 / 100;
         $months = $years * 12;
-        $taxRate = 0.2;
 
         $futureValue = 0;
         $totalInterest = 0;
@@ -171,199 +204,243 @@ class MoneyCalculatorController extends Controller
         for ($i = 1; $i <= $months; $i++) {
             $futureValue += $monthlyAmount;
             $interest = $futureValue * $monthlyRate;
-            $taxAmount = $interest * $taxRate;
+            $taxAmount = $interest * self::TAX_RATE;
             $futureValue += ($interest - $taxAmount);
             $totalInterest += $interest;
         }
 
         $futureValueAfterTax = $futureValue;
-        return view('moneycalculators.savings_result', compact('futureValueAfterTax', 'totalInterest'), ['agent' => new Agent()]);
+        return view('moneycalculators.savings_result', compact('futureValueAfterTax', 'totalInterest'));
     }
 
-    // 積立計算（ボーナス併用 - 満期一括課税）
+    /**
+     * 積立計算（ボーナス併用 - 満期一括課税）
+     */
     public function calculateBonusLumpSum(Request $request)
     {
-        $monthlyAmount = $request->input('monthly_amount');
-        $bonusAmount = $request->input('bonus_amount');
-        $rate = $request->input('rate');
-        $years = $request->input('years');
+        $rules = array_merge(self::SAVINGS_RULES, [
+            'bonus_amount' => 'required|numeric|min:0|max:100000000',
+        ]);
+
+        $validated = $request->validate($rules);
+
+        $monthlyAmount = $validated['monthly_amount'];
+        $bonusAmount = $validated['bonus_amount'];
+        $rate = $validated['rate'];
+        $years = $validated['years'];
         $bonusTimesPerYear = 2;
 
         $monthlyRate = $rate / 12 / 100;
         $months = $years * 12;
         $totalAmount = ($monthlyAmount * 12 * $years) + ($bonusAmount * $bonusTimesPerYear * $years);
-        $futureValue = $monthlyAmount * ((pow(1 + $monthlyRate, $months) - 1) / $monthlyRate);
-        $bonusFutureValue = $bonusAmount * ((pow(1 + $monthlyRate, $months / 6) - 1) / $monthlyRate);
+
+        // 0除算対策
+        $futureValue = $monthlyRate > 0
+            ? $monthlyAmount * ((pow(1 + $monthlyRate, $months) - 1) / $monthlyRate)
+            : $monthlyAmount * $months;
+        $bonusFutureValue = $monthlyRate > 0
+            ? $bonusAmount * ((pow(1 + $monthlyRate, $months / 6) - 1) / $monthlyRate)
+            : $bonusAmount * ($months / 6);
 
         $finalFutureValue = $futureValue + $bonusFutureValue;
         $interest = $finalFutureValue - $totalAmount;
-        $taxAmount = $interest * 0.2;
+        $taxAmount = $interest * self::TAX_RATE;
         $finalFutureValueAfterTax = $finalFutureValue - $taxAmount;
 
-        return view('moneycalculators.savings_result', compact('finalFutureValueAfterTax', 'interest', 'taxAmount'), ['agent' => new Agent()]);
+        return view('moneycalculators.savings_result', compact('finalFutureValueAfterTax', 'interest', 'taxAmount'));
     }
 
-    // 積立計算（ボーナス併用 - 複利毎課税）
+    /**
+     * 積立計算（ボーナス併用 - 複利毎課税）
+     */
     public function calculateBonusCompoundTax(Request $request)
     {
-        $monthlyAmount = $request->input('monthly_amount');
-        $bonusAmount = $request->input('bonus_amount');
-        $rate = $request->input('rate');
-        $years = $request->input('years');
+        $rules = array_merge(self::SAVINGS_RULES, [
+            'bonus_amount' => 'required|numeric|min:0|max:100000000',
+        ]);
+
+        $validated = $request->validate($rules);
+
+        $monthlyAmount = $validated['monthly_amount'];
+        $bonusAmount = $validated['bonus_amount'];
+        $rate = $validated['rate'];
+        $years = $validated['years'];
         $bonusTimesPerYear = 2;
 
         $monthlyRate = $rate / 12 / 100;
         $months = $years * 12;
-        $taxRate = 0.2;
 
         $futureValue = 0;
         $totalInterest = 0;
 
         for ($i = 1; $i <= $months; $i++) {
             $futureValue += $monthlyAmount;
-            if ($i % (12 / $bonusTimesPerYear) == 0) {
+            if ($i % (12 / $bonusTimesPerYear) === 0) {
                 $futureValue += $bonusAmount;
             }
             $interest = $futureValue * $monthlyRate;
-            $taxAmount = $interest * $taxRate;
+            $taxAmount = $interest * self::TAX_RATE;
             $futureValue += ($interest - $taxAmount);
             $totalInterest += $interest;
         }
 
         $finalFutureValueAfterTax = $futureValue;
-        return view('moneycalculators.savings_result', compact('finalFutureValueAfterTax', 'totalInterest'), ['agent' => new Agent()]);
+        return view('moneycalculators.savings_result', compact('finalFutureValueAfterTax', 'totalInterest'));
     }
-    // 利息計算ページの表示
-    public function interest() {
-        return view('moneycalculators.interest', ['agent' => new Agent()]);
+    /**
+     * 利息計算ページ表示
+     */
+    public function interest()
+    {
+        return view('moneycalculators.interest');
     }
 
-    // 利息計算ロジック
-    public function calculateInterest(Request $request) {
-        $principal = $request->input('principal');  // 元金
-        $rate = $request->input('rate');            // 利率（年率）
-        $years = $request->input('years');          // 期間（年）
+    /**
+     * 利息計算ロジック
+     */
+    public function calculateInterest(Request $request)
+    {
+        $validated = $request->validate([
+            'principal' => 'required|numeric|min:1|max:100000000',
+            'rate' => 'required|numeric|min:0|max:100',
+            'years' => 'required|integer|min:1|max:100',
+        ]);
 
         // 単利での利息計算
-        $interest = $principal * $rate / 100 * $years;
+        $interest = $validated['principal'] * $validated['rate'] / 100 * $validated['years'];
 
-        // 結果をビューに返す
-        return view('moneycalculators.interest_result', compact('interest'), ['agent' => new Agent()]);
+        return view('moneycalculators.interest_result', compact('interest'));
     }
 
-    // 割り勘計算ページの表示
+    /**
+     * 割り勘計算ページ表示
+     */
     public function splitBill()
     {
-        return view('moneycalculators.split_bill', ['agent' => new Agent()]);
+        return view('moneycalculators.split_bill');
     }
 
-    // 割り勘計算ロジック
+    /**
+     * 割り勘計算ロジック
+     */
     public function calculateSplitBill(Request $request)
     {
-        $totalAmount = $request->input('total_amount'); // 合計金額
-        $numPeople = $request->input('num_people');     // 人数
+        $validated = $request->validate([
+            'total_amount' => 'required|numeric|min:1|max:100000000',
+            'num_people' => 'required|integer|min:1|max:1000',
+        ], [
+            'num_people.min' => '人数は1人以上を入力してください',
+        ]);
+
+        $totalAmount = $validated['total_amount'];
+        $numPeople = $validated['num_people'];
 
         // 各人の支払額を計算
         $share = $totalAmount / $numPeople;
 
         // 割り切れるか確認し、フォーマットを選択
         if (fmod($totalAmount, $numPeople) == 0) {
-            // 割り切れる場合は整数で表示
             $shareFormatted = number_format($share, 0);
         } else {
-            // 割り切れない場合は小数点第一位まで表示
             $shareFormatted = number_format($share, 1);
         }
 
-        // 配列に各人の支払額を追加
         $adjustedAmounts = array_fill(0, $numPeople, $shareFormatted);
 
-        return view('moneycalculators.split_bill_result', compact('adjustedAmounts', 'totalAmount', 'numPeople'), ['agent' => new Agent()]);
+        return view('moneycalculators.split_bill_result', compact('adjustedAmounts', 'totalAmount', 'numPeople'));
     }
-    
-    // 消費税計算ページの表示
+
+    /**
+     * 消費税計算ページ表示
+     */
     public function tax()
     {
-        return view('moneycalculators.tax', ['agent' => new Agent()]);
+        return view('moneycalculators.tax');
     }
 
-    // 消費税計算ロジック
+    /**
+     * 消費税計算ロジック
+     */
     public function calculateTax(Request $request)
     {
-        $amount = $request->input('amount');          // 入力された金額
-        $taxRate = $request->input('tax_rate');       // 消費税率（%）
-        $type = $request->input('type');              // 税込みか税抜きかのタイプ
-        $unit = $request->input('unit');              // 単位（円 or 万円）
-        $rounding = $request->input('rounding');      // 端数処理のタイプ
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0|max:100000000',
+            'tax_rate' => 'required|numeric|min:0|max:100',
+            'type' => 'required|in:tax_included,tax_excluded',
+            'unit' => 'required|in:yen,man',
+            'rounding' => 'required|in:round,floor,ceil',
+        ]);
+
+        $amount = $validated['amount'];
+        $taxRate = $validated['tax_rate'];
+        $type = $validated['type'];
+        $unit = $validated['unit'];
+        $rounding = $validated['rounding'];
 
         // 単位が万円の場合は円に変換
-        if ($unit == 'man') {
+        if ($unit === 'man') {
             $amount *= 10000;
         }
 
         // 税額と他の金額を計算
-        if ($type == 'tax_included') {
-            // 税込金額が入力された場合
+        if ($type === 'tax_included') {
             $taxAmount = $amount - ($amount / (1 + $taxRate / 100));
             $amountExcludingTax = $amount - $taxAmount;
             $amountIncludingTax = $amount;
         } else {
-            // 税抜金額が入力された場合
             $taxAmount = $amount * ($taxRate / 100);
             $amountExcludingTax = $amount;
             $amountIncludingTax = $amount + $taxAmount;
         }
 
         // 端数処理
-        switch ($rounding) {
-            case 'round':
-                $taxAmount = round($taxAmount);
-                $amountExcludingTax = round($amountExcludingTax);
-                $amountIncludingTax = round($amountIncludingTax);
-                break;
-            case 'floor':
-                $taxAmount = floor($taxAmount);
-                $amountExcludingTax = floor($amountExcludingTax);
-                $amountIncludingTax = floor($amountIncludingTax);
-                break;
-            case 'ceil':
-                $taxAmount = ceil($taxAmount);
-                $amountExcludingTax = ceil($amountExcludingTax);
-                $amountIncludingTax = ceil($amountIncludingTax);
-                break;
-        }
+        $taxAmount = $this->applyRounding($taxAmount, $rounding);
+        $amountExcludingTax = $this->applyRounding($amountExcludingTax, $rounding);
+        $amountIncludingTax = $this->applyRounding($amountIncludingTax, $rounding);
 
-        return view('moneycalculators.tax_result', compact('amountExcludingTax', 'amountIncludingTax', 'taxAmount', 'taxRate'), ['agent' => new Agent()]);
+        return view('moneycalculators.tax_result', compact('amountExcludingTax', 'amountIncludingTax', 'taxAmount', 'taxRate'));
     }
 
-    // 割引計算ページの表示
+    /**
+     * 割引計算ページ表示
+     */
     public function discount()
     {
-        return view('moneycalculators.discount', ['agent' => new Agent()]);
+        return view('moneycalculators.discount');
     }
 
-    // 割引計算ロジック
+    /**
+     * 割引計算ロジック
+     */
     public function calculateDiscount(Request $request)
     {
-        $amount = $request->input('amount');                   // 元の金額
-        $discountRate1 = $request->input('discount_rate1');    // 1回目の割引率
-        $discountRate2 = $request->input('discount_rate2');    // 2回目の割引率
-        $taxRate = $request->input('tax_rate', 10);            // 消費税率
-        $rounding = $request->input('rounding');               // 端数処理方法（四捨五入、切り捨て、切り上げ）
-        $unit = $request->input('unit', 'yen');                // 単位
-        $type = $request->input('type', 'tax_excluded');       // 税込みか税抜きか
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0|max:100000000',
+            'discount_rate1' => 'required|numeric|min:0|max:100',
+            'discount_rate2' => 'nullable|numeric|min:0|max:100',
+            'tax_rate' => 'nullable|numeric|min:0|max:100',
+            'rounding' => 'required|in:round,floor,ceil',
+            'unit' => 'nullable|in:yen,man',
+            'type' => 'nullable|in:tax_included,tax_excluded',
+        ]);
+
+        $amount = $validated['amount'];
+        $discountRate1 = $validated['discount_rate1'];
+        $discountRate2 = $validated['discount_rate2'] ?? 0;
+        $taxRate = $validated['tax_rate'] ?? 10;
+        $rounding = $validated['rounding'];
+        $unit = $validated['unit'] ?? 'yen';
+        $type = $validated['type'] ?? 'tax_excluded';
 
         // 単位が「万円」の場合は「円」に変換
-        if ($unit == 'man') {
+        if ($unit === 'man') {
             $amount *= 10000;
         }
 
         // 消費税を含めた金額を計算
-        if ($type == 'tax_included') {
-            $amountExcludingTax = $amount / (1 + $taxRate / 100);
-        } else {
-            $amountExcludingTax = $amount;
-        }
+        $amountExcludingTax = $type === 'tax_included'
+            ? $amount / (1 + $taxRate / 100)
+            : $amount;
 
         // 割引の適用
         $discountedAmount = $amountExcludingTax;
@@ -376,25 +453,29 @@ class MoneyCalculatorController extends Controller
         $totalDiscount = $discount1 + $discount2;
 
         // 端数処理
-        switch ($rounding) {
-            case 'round':
-                $discountedAmount = round($discountedAmount);
-                break;
-            case 'floor':
-                $discountedAmount = floor($discountedAmount);
-                break;
-            case 'ceil':
-                $discountedAmount = ceil($discountedAmount);
-                break;
-        }
+        $discountedAmount = $this->applyRounding($discountedAmount, $rounding);
 
         // 税込みの場合の計算結果に税金を追加
-        if ($type == 'tax_excluded') {
-            $discountedAmountIncludingTax = $discountedAmount * (1 + $taxRate / 100);
-        } else {
-            $discountedAmountIncludingTax = $discountedAmount;
-        }
+        $discountedAmountIncludingTax = $type === 'tax_excluded'
+            ? $discountedAmount * (1 + $taxRate / 100)
+            : $discountedAmount;
 
-        return view('moneycalculators.discount_result', compact('amount', 'discountRate1', 'discountRate2', 'taxRate', 'totalDiscount', 'discountedAmount', 'discountedAmountIncludingTax', 'rounding'), ['agent' => new Agent()]);
+        return view('moneycalculators.discount_result', compact(
+            'amount', 'discountRate1', 'discountRate2', 'taxRate',
+            'totalDiscount', 'discountedAmount', 'discountedAmountIncludingTax', 'rounding'
+        ));
+    }
+
+    /**
+     * 端数処理の共通メソッド
+     */
+    private function applyRounding(float $value, string $method): float
+    {
+        return match ($method) {
+            'round' => round($value),
+            'floor' => floor($value),
+            'ceil' => ceil($value),
+            default => round($value),
+        };
     }
 }

@@ -1,7 +1,27 @@
 @extends('layouts.app')
 
+@section('title', '積立計算 - 将来の貯蓄額をシミュレーション | Daily Calc Assistant')
+@section('description', '毎月の積立額から将来の貯蓄総額を計算。満期一括課税・複利毎課税・ボーナス併用など、さまざまな積立パターンをシミュレーションできます。')
+@section('keywords', '積立計算,貯金シミュレーション,複利計算,積立投資,将来価値計算,満期一括課税,複利毎課税')
+
 @section('content')
-    <h1>積立計算</h1>
+<div class="calculator-container">
+    <div class="calculator-header">
+        <h1>積立計算</h1>
+        <p class="calculator-description">毎月の積み立て金額を入力して、将来の積み立て総額を計算します。<br>貯金や投資計画を立てる際に最適なツールです。</p>
+    </div>
+
+    @if ($errors->any())
+        <div class="alert alert-danger">
+            <ul>
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <h2>満期一括課税</h2>
     <p>毎月の積み立て金額を入力して、将来の積み立て総額を計算します。<br>貯金や投資計画を立てる際に最適なツールです。</p>
 
     <h2>満期一括課税</h2>
