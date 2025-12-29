@@ -24,9 +24,9 @@ class MoneyCalculatorController extends Controller
     ];
 
     /**
-     * 税率定数
+     * 税率定数（所得税15% + 住民税5% + 復興特別所得税0.315%）
      */
-    private const TAX_RATE = 0.2; // 20%
+    private const TAX_RATE = 0.20315;
 
     /**
      * ローン計算ページ表示
@@ -146,6 +146,7 @@ class MoneyCalculatorController extends Controller
             'totalPayment' => $totalPayment,
             'totalInterest' => $totalInterest,
             'method' => $method,
+            'loanAmount' => $principal * 10000,
         ];
     }
 
@@ -158,9 +159,9 @@ class MoneyCalculatorController extends Controller
     }
 
     /**
-     * 積立計算（満期一括課税）
+     * 積立計算（基本）
      */
-    public function calculateLumpSum(Request $request)
+    public function calculateSavings(Request $request)
     {
         $validated = $request->validate(self::SAVINGS_RULES);
 
@@ -179,81 +180,16 @@ class MoneyCalculatorController extends Controller
 
         $interest = $futureValue - $totalAmount;
         $taxAmount = $interest * self::TAX_RATE;
-        $futureValueAfterTax = $futureValue - $taxAmount;
+        $finalFutureValueAfterTax = $futureValue - $taxAmount;
 
-        return view('moneycalculators.savings_result', compact('futureValueAfterTax', 'interest', 'taxAmount'));
+        return view('moneycalculators.savings_result', compact('finalFutureValueAfterTax', 'taxAmount'))
+            ->with('totalInterest', $interest);
     }
 
     /**
-     * 積立計算（複利毎課税）
+     * 積立計算（ボーナス併用）
      */
-    public function calculateCompoundTax(Request $request)
-    {
-        $validated = $request->validate(self::SAVINGS_RULES);
-
-        $monthlyAmount = $validated['monthly_amount'];
-        $rate = $validated['rate'];
-        $years = $validated['years'];
-
-        $monthlyRate = $rate / 12 / 100;
-        $months = $years * 12;
-
-        $futureValue = 0;
-        $totalInterest = 0;
-
-        for ($i = 1; $i <= $months; $i++) {
-            $futureValue += $monthlyAmount;
-            $interest = $futureValue * $monthlyRate;
-            $taxAmount = $interest * self::TAX_RATE;
-            $futureValue += ($interest - $taxAmount);
-            $totalInterest += $interest;
-        }
-
-        $futureValueAfterTax = $futureValue;
-        return view('moneycalculators.savings_result', compact('futureValueAfterTax', 'totalInterest'));
-    }
-
-    /**
-     * 積立計算（ボーナス併用 - 満期一括課税）
-     */
-    public function calculateBonusLumpSum(Request $request)
-    {
-        $rules = array_merge(self::SAVINGS_RULES, [
-            'bonus_amount' => 'required|numeric|min:0|max:100000000',
-        ]);
-
-        $validated = $request->validate($rules);
-
-        $monthlyAmount = $validated['monthly_amount'];
-        $bonusAmount = $validated['bonus_amount'];
-        $rate = $validated['rate'];
-        $years = $validated['years'];
-        $bonusTimesPerYear = 2;
-
-        $monthlyRate = $rate / 12 / 100;
-        $months = $years * 12;
-        $totalAmount = ($monthlyAmount * 12 * $years) + ($bonusAmount * $bonusTimesPerYear * $years);
-
-        // 0除算対策
-        $futureValue = $monthlyRate > 0
-            ? $monthlyAmount * ((pow(1 + $monthlyRate, $months) - 1) / $monthlyRate)
-            : $monthlyAmount * $months;
-        $bonusFutureValue = $monthlyRate > 0
-            ? $bonusAmount * ((pow(1 + $monthlyRate, $months / 6) - 1) / $monthlyRate)
-            : $bonusAmount * ($months / 6);
-
-        $finalFutureValue = $futureValue + $bonusFutureValue;
-        $interest = $finalFutureValue - $totalAmount;
-        $taxAmount = $interest * self::TAX_RATE;
-        $finalFutureValueAfterTax = $finalFutureValue - $taxAmount;
-
-        return view('moneycalculators.savings_result', compact('finalFutureValueAfterTax', 'interest', 'taxAmount'));
-    }
-
-    /**
-     * 積立計算（ボーナス併用 - 複利毎課税）
-     */
-    public function calculateBonusCompoundTax(Request $request)
+    public function calculateSavingsWithBonus(Request $request)
     {
         $rules = array_merge(self::SAVINGS_RULES, [
             'bonus_amount' => 'required|numeric|min:0|max:100000000',
@@ -279,14 +215,16 @@ class MoneyCalculatorController extends Controller
                 $futureValue += $bonusAmount;
             }
             $interest = $futureValue * $monthlyRate;
-            $taxAmount = $interest * self::TAX_RATE;
-            $futureValue += ($interest - $taxAmount);
+            $futureValue += $interest;
             $totalInterest += $interest;
         }
 
-        $finalFutureValueAfterTax = $futureValue;
-        return view('moneycalculators.savings_result', compact('finalFutureValueAfterTax', 'totalInterest'));
+        $taxAmount = $totalInterest * self::TAX_RATE;
+        $finalFutureValueAfterTax = $futureValue - $taxAmount;
+        
+        return view('moneycalculators.savings_result', compact('finalFutureValueAfterTax', 'totalInterest', 'taxAmount'));
     }
+
     /**
      * 利息計算ページ表示
      */

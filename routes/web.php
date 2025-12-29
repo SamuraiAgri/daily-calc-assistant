@@ -7,6 +7,8 @@ use App\Http\Controllers\DateCalculatorController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\GlossaryController;
+use App\Http\Controllers\LifeEventController;
 
 // ホームページ
 Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -18,6 +20,14 @@ Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap')
 Route::view('/privacy', 'privacy')->name('privacy');
 Route::view('/about', 'about')->name('about');
 Route::view('/faq', 'faq')->name('faq');
+
+// 用語集
+Route::get('/glossary', [GlossaryController::class, 'index'])->name('glossary.index');
+Route::get('/glossary/category/{category}', [GlossaryController::class, 'category'])->name('glossary.category');
+
+// ライフイベントガイド
+Route::get('/life-events', [LifeEventController::class, 'index'])->name('life-events.index');
+Route::get('/life-events/{slug}', [LifeEventController::class, 'show'])->name('life-events.show');
 
 // お問い合わせ
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
@@ -34,10 +44,8 @@ Route::post('/loan', [MoneyCalculatorController::class, 'calculateLoan']);
 Route::post('/loan-with-bonus', [MoneyCalculatorController::class, 'calculateLoanWithBonus'])->name('calculator.loanWithBonus');
 
 Route::get('/savings', [MoneyCalculatorController::class, 'savings'])->name('calculator.savings');
-Route::post('/savings-lump-sum', [MoneyCalculatorController::class, 'calculateLumpSum'])->name('calculator.savingsLumpSum');
-Route::post('/savings-compound-tax', [MoneyCalculatorController::class, 'calculateCompoundTax'])->name('calculator.savingsCompoundTax');
-Route::post('/savings-bonus-lump-sum', [MoneyCalculatorController::class, 'calculateBonusLumpSum'])->name('calculator.savingsBonusLumpSum');
-Route::post('/savings-bonus-compound-tax', [MoneyCalculatorController::class, 'calculateBonusCompoundTax'])->name('calculator.savingsBonusCompoundTax');
+Route::post('/savings', [MoneyCalculatorController::class, 'calculateSavings']);
+Route::post('/savings-with-bonus', [MoneyCalculatorController::class, 'calculateSavingsWithBonus'])->name('calculator.savingsWithBonus');
 
 Route::get('/tax', [MoneyCalculatorController::class, 'tax'])->name('calculator.tax');
 Route::post('/tax', [MoneyCalculatorController::class, 'calculateTax']);

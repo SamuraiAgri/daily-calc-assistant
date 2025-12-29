@@ -85,6 +85,8 @@
             <ul>
                 <li><a href="{{ route('home') }}">ホーム</a></li>
                 <li><a href="{{ route('blog.index') }}">ブログ</a></li>
+                <li><a href="{{ route('glossary.index') }}">用語集</a></li>
+                <li><a href="{{ route('life-events.index') }}">ライフイベントガイド</a></li>
                 <li><a href="{{ route('calculator.loan') }}">ローン計算</a></li>
                 <li><a href="{{ route('calculator.savings') }}">積み立て計算</a></li>
                 <li><a href="{{ route('calculator.interest') }}">利息計算</a></li>
@@ -118,7 +120,9 @@
             <ul>
                 <li><a href="{{ route('home') }}">ホーム</a></li>
                 <li><a href="{{ route('blog.index') }}">ブログ</a></li>
-                <li><a href="{{ route('faq') }}">FAQ</a></li>
+                <li><a href="{{ route('glossary.index') }}">用語集</a></li>
+                <li><a href="{{ route('life-events.index') }}">ライフイベント</a></li>
+                <li><a href="{{ route('faq') }}">よくある質問</a></li>
                 <li><a href="{{ route('contact') }}">お問い合わせ</a></li>
             </ul>
         </nav>
@@ -142,6 +146,8 @@
                 <ul>
                     <li><a href="{{ route('home') }}">ホーム</a></li>
                     <li><a href="{{ route('blog.index') }}">ブログ</a></li>
+                    <li><a href="{{ route('glossary.index') }}">用語集</a></li>
+                    <li><a href="{{ route('life-events.index') }}">ライフイベント</a></li>
                     <li><a href="{{ route('faq') }}">よくある質問</a></li>
                     <li><a href="{{ route('contact') }}">お問い合わせ</a></li>
                 </ul>
@@ -151,8 +157,13 @@
                 <ul>
                     <li><a href="{{ route('calculator.loan') }}">ローン計算</a></li>
                     <li><a href="{{ route('calculator.savings') }}">積み立て計算</a></li>
+                    <li><a href="{{ route('calculator.interest') }}">利息計算</a></li>
+                    <li><a href="{{ route('calculator.splitBill') }}">割り勘計算</a></li>
                     <li><a href="{{ route('calculator.tax') }}">税金計算</a></li>
+                    <li><a href="{{ route('calculator.discount') }}">割引計算</a></li>
                     <li><a href="{{ route('datecalculator.age') }}">年齢計算</a></li>
+                    <li><a href="{{ route('datecalculator.schoolYears') }}">入学卒業年計算</a></li>
+                    <li><a href="{{ route('datecalculator.daysSince') }}">日数計算</a></li>
                 </ul>
             </div>
             <div class="footer-section">
