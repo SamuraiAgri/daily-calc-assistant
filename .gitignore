@@ -1,15 +1,44 @@
+# Dependencies
 /node_modules
+/vendor
+
+# Build outputs (GitHub Actionsでビルド)
+/public/js/*
+/public/css/*
+/public/mix-manifest.json
+!/public/js/.gitkeep
+!/public/css/.gitkeep
+
+# Laravel
 /public/hot
 /public/storage
 /storage/*.key
-/vendor
+/bootstrap/cache/*.php
+
+# Environment
 .env
 .env.backup
+.env.production
+
+# IDE
+/.idea
+/.vscode
+/.fleet
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log
+yarn-error.log
+
+# Testing
 .phpunit.result.cache
+/.phpunit.cache
+
+# Others
 docker-compose.override.yml
 Homestead.json
 Homestead.yaml
-npm-debug.log
-yarn-error.log
-/.idea
-/.vscode
