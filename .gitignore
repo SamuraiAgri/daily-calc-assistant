@@ -8,6 +8,7 @@
 /public/mix-manifest.json
 !/public/js/.gitkeep
 !/public/css/.gitkeep
+!/public/css/mobile.css
 
 # Laravel
 /public/hot
