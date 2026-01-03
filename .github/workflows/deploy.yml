@@ -55,32 +55,25 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-dev --optimize-autoloader --no-interaction
 
-      # 8. SFTP でデプロイ
-      - name: Deploy via SFTP
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
-        with:
-          server: ${{ secrets.SFTP_HOST }}
-          username: ${{ secrets.SFTP_USERNAME }}
-          password: ${{ secrets.SFTP_PASSWORD }}
-          port: 22
-          local_path: './'
-          remote_path: '/home/laravel-times/www/daily-calc-assistant/'
-          sftp_only: true
-          delete_remote_files: false
-          exclude: |
-            .git/
-            .github/
-            node_modules/
-            tests/
-            .env
-            .env.*
-            .env.example
-            storage/logs/*
-            storage/framework/cache/*
-            storage/framework/sessions/*
-            storage/framework/views/*
+      # 8. 不要ファイルを削除（転送前）
+      - name: Clean up before deploy
+        run: |
+          rm -rf .git .github node_modules tests
+          rm -f .env .env.* .gitignore .gitattributes
+          rm -rf storage/logs/* storage/framework/cache/* storage/framework/sessions/* storage/framework/views/*
 
-      # 9. SSH でデプロイ後の処理
+      # 9. LFTP でデプロイ
+      - name: Deploy via LFTP
+        run: |
+          sudo apt-get update && sudo apt-get install -y lftp
+          lftp -u ${{ secrets.SFTP_USERNAME }},${{ secrets.SFTP_PASSWORD }} sftp://${{ secrets.SFTP_HOST }} -e "
+            set sftp:auto-confirm yes;
+            set ssl:verify-certificate no;
+            mirror --reverse --verbose --delete --exclude .env --exclude storage/logs/ --exclude storage/framework/cache/ --exclude storage/framework/sessions/ --exclude storage/framework/views/ ./ /home/laravel-times/www/daily-calc-assistant/;
+            quit
+          "
+
+      # 10. SSH でデプロイ後の処理
       - name: Post-deploy commands
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -96,6 +89,6 @@ jobs:
             php artisan optimize
             chmod -R 775 storage bootstrap/cache
 
-      # 10. 完了通知
+      # 11. 完了通知
       - name: Deployment completed
         run: echo "✅ daily-calc-assistant deployed successfully!"
